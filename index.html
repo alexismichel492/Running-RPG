@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Running RPG">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Running Quest V8</title>
+  
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzE2MWIyMiIvPjxyZWN0IHg9IjUiIHk9IjUiIHdpZHRoPSI5MCIgaGVpZ2h0PSI5MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZDI5OTIyIiBzdHJva2Utd2lkdGg9IjUiIHJ4PSIxNSIvPjx0ZXh0IHg9IjUwIiB5PSI2MCIgZm9udC1zaXplPSI0NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+44OtPC90ZXh0Pjwvc3ZnPg==">
+
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0d1117; --panel-bg: #161b22; --border-color: #30363d;
+      --xp-color: #39d353; --xp-bg: #0e4429; --text-main: #c9d1d9;
+      --text-muted: #8b949e; --gold: #d29922; --tavern-color: #ff9f43;
+      --tavern-bg: #5c3c15; --danger: #f85149; --loot-color: #a78bfa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      background-color: var(--bg-color); color: var(--text-main); font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px 15px; overflow-x: hidden;
+    }
+
+    /* --- HERO PANEL --- */
+    .hero-panel {
+      width: 100%; max-width: 400px; background: var(--panel-bg); border: 2px solid var(--border-color);
+      border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5); position: relative; margin-bottom: 15px;
+    }
+    .hero-panel::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--gold), #f0e68c);
+    }
+    
+    .top-icons { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; }
+    .level-badge { background: var(--gold); color: #000; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; padding: 8px 10px; border-radius: 8px; }
+    .btn-group { display: flex; gap: 8px; }
+    .top-btn { background: #21262d; border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; padding: 5px 8px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center;}
+    .top-btn.ach { border-color: var(--gold); color: var(--gold); }
+    .top-btn.inv { border-color: var(--loot-color); color: var(--loot-color); }
+    .streak-badge { font-size: 1rem; font-weight: bold; color: #ff7b72; display: flex; align-items: center; gap: 5px; }
+    
+    .avatar-container {
+      width: 90px; height: 90px; background: #21262d; border: 3px solid var(--gold); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 25px 0 10px 0;
+      box-shadow: 0 0 20px rgba(210, 153, 34, 0.2); transition: transform 0.3s;
+    }
+    
+    .hero-title { font-family: 'Press Start 2P', monospace; font-size: 0.55rem; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; text-align: center; line-height: 1.4; }
+    .hero-name { font-size: 1.4rem; font-weight: 700; margin-bottom: 5px; letter-spacing: 1px; text-align: center; }
+    .buff-indicator { font-size: 0.8rem; color: var(--loot-color); font-weight: bold; margin-bottom: 10px; height: 16px; animation: pulseBuff 2s infinite;}
+
+    /* --- XP BAR --- */
+    .xp-section { width: 100%; }
+    .xp-labels { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+    .xp-bar { width: 100%; height: 18px; background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 9px; overflow: hidden; }
+    .xp-fill { height: 100%; width: 0%; background: var(--xp-color); box-shadow: 0 0 10px var(--xp-color); transition: width 0.5s ease-out; }
+
+    /* --- CALENDAR --- */
+    .calendar-panel { width: 100%; max-width: 400px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .nav-btn { background: #21262d; color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 15px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; cursor: pointer; }
+    .nav-btn:disabled { opacity: 0.3; }
+    .month-title { font-family: 'Press Start 2P', monospace; font-size: 0.7rem; text-align: center; color: var(--text-main); }
+    
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .weekday { text-align: center; font-weight: 700; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 5px; }
+    .day-node {
+      aspect-ratio: 1; background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: var(--text-muted); position: relative; transition: all 0.2s;
+    }
+    .day-node:active { transform: scale(0.85); }
+    .day-node.empty { background: transparent; border: none; }
+    .day-node.today { border-color: var(--gold); color: var(--gold); }
+    .day-node.blocked { opacity: 0.3; cursor: not-allowed; background: repeating-linear-gradient(45deg, #161b22, #161b22 5px, #0d1117 5px, #0d1117 10px); }
+    
+    /* Type RUN */
+    .day-node.run { background: var(--xp-bg); border-color: var(--xp-color); color: var(--xp-color); box-shadow: 0 0 10px rgba(57, 211, 83, 0.3); animation: popIn 0.3s ease-out forwards; }
+    .day-node.run::after { content: '⚔️'; position: absolute; font-size: 0.8rem; bottom: -4px; right: -4px; opacity: 0; animation: dropIn 0.3s 0.2s forwards; }
+    
+    /* Type TAVERN */
+    .day-node.tavern { background: var(--tavern-bg); border-color: var(--tavern-color); color: var(--tavern-color); box-shadow: 0 0 10px rgba(255, 159, 67, 0.3); animation: popIn 0.3s ease-out forwards; }
+    .day-node.tavern::after { content: '🍺'; position: absolute; font-size: 0.8rem; bottom: -4px; right: -4px; opacity: 0; animation: dropIn 0.3s 0.2s forwards; }
+
+    /* --- MODALS --- */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-box {
+      background: var(--panel-bg); width: 90%; max-width: 350px; border: 2px solid var(--border-color);
+      border-radius: 12px; padding: 20px; text-align: center; transform: translateY(20px); transition: transform 0.3s;
+      max-height: 85vh; display: flex; flex-direction: column;
+    }
+    .modal-overlay.active .modal-box { transform: translateY(0); }
+    .modal-title { font-family: 'Press Start 2P', monospace; font-size: 0.7rem; color: var(--gold); margin-bottom: 15px; line-height: 1.4; flex-shrink: 0;}
+    .modal-desc { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px; flex-shrink: 0;}
+    
+    .action-btn { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: none; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.1rem; cursor: pointer; flex-shrink: 0;}
+    .btn-run { background: rgba(57,211,83,0.2); border: 2px solid var(--xp-color); color: var(--xp-color); }
+    .btn-tavern { background: rgba(255,159,67,0.2); border: 2px solid var(--tavern-color); color: var(--tavern-color); }
+    .btn-use { background: rgba(167, 139, 250, 0.2); border: 2px solid var(--loot-color); color: var(--loot-color); padding: 8px;}
+    .btn-obsidian { background: rgba(139, 92, 246, 0.2); border: 2px solid #8b5cf6; color: #a78bfa; margin-top: 15px;}
+    .btn-sys { background: #21262d; border: 1px solid var(--border-color); color: var(--text-main); margin-bottom: 5px; font-size: 1rem; padding: 8px; flex: 1;}
+    .btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); margin-top: 10px; }
+    .btn-danger { background: rgba(248,81,73,0.2); border: 2px solid var(--danger); color: var(--danger); }
+
+    /* --- INVENTORY & LOOT --- */
+    .inv-grid { display: grid; grid-template-columns: 1fr; gap: 10px; overflow-y: auto; text-align: left; margin-bottom: 15px;}
+    .inv-card { background: #21262d; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;}
+    .inv-info { display: flex; align-items: center; gap: 12px; }
+    .inv-icon { font-size: 1.8rem; position: relative; }
+    .inv-qty { position: absolute; bottom: -5px; right: -5px; background: var(--loot-color); color: #000; font-size: 0.6rem; font-weight: bold; padding: 2px 5px; border-radius: 10px;}
+    .inv-text { display: flex; flex-direction: column; }
+    .inv-title { font-weight: 700; font-size: 0.9rem; color: var(--loot-color); }
+    .inv-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.2;}
+    
+    .loot-icon-big { font-size: 4rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; margin: 10px 0;}
+
+    /* --- ACHIEVEMENTS GRID --- */
+    .ach-grid { display: grid; grid-template-columns: 1fr; gap: 10px; overflow-y: auto; text-align: left; margin-bottom: 15px; padding-right: 5px;}
+    .ach-card { background: #21262d; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 12px; opacity: 0.5; filter: grayscale(1); transition: all 0.3s; }
+    .ach-card.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--gold); background: rgba(210, 153, 34, 0.1); }
+    .ach-icon { font-size: 1.8rem; }
+    .ach-info { display: flex; flex-direction: column; }
+    .ach-title { font-weight: 700; font-size: 0.9rem; color: var(--gold); }
+    .ach-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.2;}
+
+    /* --- STATS PANEL --- */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    .stat-box { background: #21262d; padding: 15px 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .stat-val { font-size: 1.5rem; font-weight: bold; color: var(--text-main); margin-bottom: 5px; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+    .sys-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+
+    /* --- ANIMATIONS --- */
+    @keyframes popIn { 0% { transform: scale(0.5); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    @keyframes pulseBuff { 0% { opacity: 0.7; } 50% { opacity: 1; text-shadow: 0 0 8px var(--loot-color); } 100% { opacity: 0.7; } }
+    .floating-text { position: fixed; font-family: 'Press Start 2P', monospace; font-size: 1rem; pointer-events: none; z-index: 2000; animation: floatUp 1.2s ease-out forwards; text-shadow: 2px 2px 0 #000; text-align: center; }
+    @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1.5); opacity: 0; } }
+  </style>
+</head>
+<body>
+
+  <!-- HERO PANEL -->
+  <div class="hero-panel">
+    <div class="top-icons">
+      <div class="level-badge" id="lvlBadge">LVL 1</div>
+      <div style="display:flex; gap: 10px; align-items: center;">
+        <div class="streak-badge">🔥 <span id="streakCount">0</span></div>
+        <div class="btn-group">
+          <div class="top-btn inv" onclick="openInvModal()">🎒</div>
+          <div class="top-btn" onclick="openStatsModal()">📊</div>
+          <div class="top-btn ach" onclick="openAchModal()">🏆</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="avatar-container" id="avatarIcon">🛋️</div>
+    
+    <div class="hero-title" id="heroTitle">Civil Sédentaire</div>
+    <div class="hero-name" id="rankName">Grade Actuel</div>
+    <div class="buff-indicator" id="buffIndicator"></div>
+
+    <div class="xp-section">
+      <div class="xp-labels"><span>EXP</span><span id="xpText">0 / 300</span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpBarFill"></div></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="calendar-panel">
+    <div class="calendar-header">
+      <button id="prevMonthBtn" class="nav-btn" onclick="changeMonth(-1)">&lt;</button>
+      <div class="month-title" id="monthTitle">SEPTEMBRE 2026</div>
+      <button id="nextMonthBtn" class="nav-btn" onclick="changeMonth(1)">&gt;</button>
+    </div>
+    <div class="calendar-grid" id="calGrid"></div>
+  </div>
+
+  <!-- DAY ACTION MODAL -->
+  <div class="modal-overlay" id="actionModal">
+    <div class="modal-box">
+      <div class="modal-title" id="actionModalTitle">ACTION DU JOUR</div>
+      <div class="modal-desc" id="actionModalDesc">Choisis ton action pour ce jour.</div>
+      
+      <div id="actionButtons">
+        <button class="action-btn btn-run" id="btnRunMain" onclick="submitAction('run')">⚔️ J'ai Couru ! (+100 XP)</button>
+        <button class="action-btn btn-tavern" onclick="submitAction('tavern')">🍺 Taverne (+50 XP)</button>
+      </div>
+      
+      <div id="removeButtons" style="display: none;">
+        <button class="action-btn btn-danger" onclick="submitAction('remove')">❌ Annuler l'action</button>
+      </div>
+      
+      <button class="action-btn btn-cancel" onclick="closeModal('actionModal')">Retour</button>
+    </div>
+  </div>
+
+  <!-- LOOT MODAL -->
+  <div class="modal-overlay" id="lootModal">
+    <div class="modal-box" style="border-color: var(--loot-color);">
+      <div class="modal-title" style="color: var(--loot-color);">DROP OBTENU !</div>
+      <div class="loot-icon-big" id="lootIcon">🎁</div>
+      <div class="modal-desc" id="lootName" style="color: var(--text-main); font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">Nom de l'objet</div>
+      <div class="modal-desc" id="lootDesc" style="font-size: 0.85rem;">Description de l'objet</div>
+      <button class="action-btn btn-cancel" onclick="closeModal('lootModal')">Génial !</button>
+    </div>
+  </div>
+
+  <!-- INVENTORY MODAL -->
+  <div class="modal-overlay" id="invModal">
+    <div class="modal-box" style="max-width: 95%;">
+      <div class="modal-title" style="color: var(--loot-color);">INVENTAIRE 🎒</div>
+      <div class="inv-grid" id="invGrid">
+        <!-- Rempli en JS -->
+      </div>
+      <div class="modal-title" style="color: var(--gold); margin-top: 15px;">TITRES DÉBLOQUÉS 👑</div>
+      <div class="inv-grid" id="titleGrid" style="max-height: 150px;">
+        <!-- Rempli en JS -->
+      </div>
+      <button class="action-btn btn-cancel" onclick="closeModal('invModal')">Fermer</button>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS MODAL -->
+  <div class="modal-overlay" id="achModal">
+    <div class="modal-box" style="max-width: 95%;">
+      <div class="modal-title">HAUTS-FAITS</div>
+      <div class="ach-grid" id="achGrid"></div>
+      <button class="action-btn btn-cancel" onclick="closeModal('achModal')">Fermer</button>
+    </div>
+  </div>
+
+  <!-- STATS & SETTINGS MODAL -->
+  <div class="modal-overlay" id="statsModal">
+    <div class="modal-box">
+      <div class="modal-title">STATISTIQUES & SYSTÈME</div>
+      
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="statTotalRuns">0</div>
+          <div class="stat-label">Courses Totales</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statTotalTaverns">0</div>
+          <div class="stat-label">Jours Taverne</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statMaxStreak">0</div>
+          <div class="stat-label">Série Max</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statAch">0/0</div>
+          <div class="stat-label">Hauts-Faits</div>
+        </div>
+      </div>
+
+      <button class="action-btn btn-obsidian" onclick="exportToObsidian()">📝 Exporter pour Obsidian</button>
+      
+      <div style="border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 15px;">
+        <div class="sys-actions">
+          <button class="action-btn btn-sys" onclick="exportSave()">💾 Sauvegarder la partie</button>
+          <button class="action-btn btn-sys" onclick="importSave()">📂 Restaurer une partie</button>
+        </div>
+      </div>
+
+      <button class="action-btn btn-cancel" onclick="closeModal('statsModal')">Fermer</button>
+    </div>
+  </div>
+
+  <script>
+    const XP_RUN = 100;
+    const XP_TAVERN = 50;
+
+    const ITEMS = {
+      'parch': { icon: '📜', name: 'Petit Parchemin', desc: 'Donne +50 XP instantanément.' },
+      'bonbon': { icon: '🍬', name: 'Bonbon Sagesse', desc: 'La prochaine course rapporte XP x2 (Cumulable avec Week-End et Streak).' },
+      'ticket': { icon: '🎫', name: 'Ticket VIP Taverne', desc: 'Permet de prendre un jour de repos sans compter dans la limite hebdomadaire.' }
+    };
+
+    const TITLES_POOL = ["Le Wabbit Pressé", "Chevalier de Bonta", "Traqueur d'Âmes", "Marcheur Dimensionnel", "L'Ombre d'Astrub", "Maître des Kamas", "Le Bouftou Vaillant"];
+
+    const RANKS = [
+      { minLvl: 1,  title: "Civil Sédentaire", emoji: "🛋️" },
+      { minLvl: 3,  title: "Recrue Motivée", emoji: "🚶" },
+      { minLvl: 5,  title: "Aspirant Coureur", emoji: "🏃" },
+      { minLvl: 7,  title: "Marcheur des Plaines", emoji: "🌾" },
+      { minLvl: 9,  title: "Coureur des Bois", emoji: "🌲" },
+      { minLvl: 11, title: "Éclaireur de Bronze", emoji: "⛺" },
+      { minLvl: 13, title: "Garde de la Cité", emoji: "💂" },
+      { minLvl: 15, title: "Soldat de l'Aube", emoji: "🌅" },
+      { minLvl: 17, title: "Fantassin Aguerri", emoji: "🛡️" },
+      { minLvl: 19, title: "Sous-Officier de Fer", emoji: "⚔️" },
+      { minLvl: 21, title: "Lieutenant des Tranchées", emoji: "🎖️" },
+      { minLvl: 23, title: "Capitaine de l'Asphalte", emoji: "🏴‍☠️" },
+      { minLvl: 25, title: "Commandant du Vent", emoji: "🌪️" },
+      { minLvl: 27, title: "Major de l'Endurance", emoji: "🏅" },
+      { minLvl: 29, title: "Général des Sentiers", emoji: "🐺" },
+      { minLvl: 31, title: "Héros de la Nation", emoji: "🦸‍♂️" },
+      { minLvl: 33, title: "Légende Vivante", emoji: "👑" }
+    ];
+
+    const ACHIEVEMENTS = [
+      { id: 'first_blood', icon: '🩸', title: 'Premier Sang', desc: 'Compléter sa première course.' },
+      { id: 'night_watch', icon: '🦉', title: 'Ronde de Nuit', desc: 'Enregistrer 10 courses au total.' },
+      { id: 'perfect_week', icon: '📅', title: 'Régularité', desc: 'Atteindre un streak de 7 jours.' },
+      { id: 'ouroboros', icon: '🐍', title: "L'Ouroboros", desc: 'Un cycle parfait : atteindre 20 jours de série.' },
+      { id: 'monday_motivation', icon: '🚀', title: "L'Appel du Lundi", desc: 'Trouver la force de courir un lundi.' },
+      { id: 'friday_survivor', icon: '🍻', title: 'Le Survivant', desc: 'Sortir courir un vendredi après le travail.' },
+      { id: 'weekend_warrior', icon: '🛡️', title: 'Garde Civile', desc: 'Courir le samedi ET le dimanche de la même semaine.' },
+      { id: 'tavern_noob', icon: '🛌', title: 'Repos Mérité', desc: 'Utiliser la Taverne pour la première fois.' },
+      { id: 'tavern_pillar', icon: '🍺', title: 'Pilier de Bar', desc: 'Utiliser 3 jours de taverne la même semaine.' },
+      { id: 'holy_month', icon: '🔥', title: 'Le Mois Sacré', desc: 'Atteindre un streak de 30 jours.' },
+      { id: 'forgemage', icon: '🔨', title: 'Maître Forgemage', desc: 'Atteindre 50 courses totales.' },
+      { id: 'centurion', icon: '💯', title: 'Centurion', desc: 'Atteindre un incroyable streak de 100 jours.' },
+      { id: 'looter', icon: '🎁', title: 'Chasseur de Trésors', desc: 'Obtenir son premier drop.' }
+    ];
+
+    let state = JSON.parse(localStorage.getItem('running_rpg_v8_state')) || {
+      totalXp: 0,
+      history: {}, 
+      achievements: [],
+      maxStreak: 0,
+      inventory: { 'parch': 0, 'bonbon': 0, 'ticket': 0 },
+      titles: [],
+      equippedTitle: null,
+      activeBuffs: { doubleXp: false },
+      startYear: 2026,
+      startMonth: 8 // Septembre (0-indexé)
+    };
+
+    // Migration
+    let oldState = JSON.parse(localStorage.getItem('running_rpg_v7_state'));
+    if (oldState && Object.keys(state.history).length === 0) {
+      state = oldState;
+      state.startYear = 2026;
+      state.startMonth = 8;
+      saveState();
+    }
+
+    let displayYear = new Date().getFullYear();
+    let displayMonth = new Date().getMonth();
+    let selectedDateStr = null;
+
+    function saveState() {
+      localStorage.setItem('running_rpg_v8_state', JSON.stringify(state));
+    }
+
+    function getPlayerStats() {
+      let lvl = 1;
+      let xpNeeded = 300;
+      let currentXp = state.totalXp;
+      
+      while(currentXp >= xpNeeded) {
+        currentXp -= xpNeeded;
+        lvl++;
+        if (lvl % 2 === 0) xpNeeded += 100; else xpNeeded += 200;
+      }
+
+      let currentRank = RANKS[0];
+      for (let i = RANKS.length - 1; i >= 0; i--) {
+        if (lvl >= RANKS[i].minLvl) { currentRank = RANKS[i]; break; }
+      }
+      return { level: lvl, currentXpInLevel: currentXp, xpNeeded, rank: currentRank };
+    }
+
+    function getStreak() {
+      let streak = 0;
+      let checkDate = new Date();
+      let todayStr = formatDate(checkDate);
+      if (!state.history[todayStr]) checkDate.setDate(checkDate.getDate() - 1);
+
+      while (true) {
+        let dStr = formatDate(checkDate);
+        if (state.history[dStr]) {
+          streak++; checkDate.setDate(checkDate.getDate() - 1);
+        } else break;
+      }
+      
+      if(streak > state.maxStreak) {
+        state.maxStreak = streak;
+        saveState();
+      }
+      return streak;
+    }
+
+    // Calcul du bonus de streak
+    function getStreakBonus() {
+        let currentStreak = getStreak();
+        // Exemple : +1 XP par jour de streak consécutif (plafond à +50 XP max)
+        return Math.min(currentStreak, 50); 
+    }
+
+    function countTavernInWeek(dateStr) {
+      let parts = dateStr.split('-');
+      let d = new Date(parts[0], parts[1]-1, parts[2]);
+      let day = d.getDay() || 7; 
+      let start = new Date(d);
+      start.setDate(d.getDate() - day + 1); 
+      
+      let count = 0;
+      for(let i=0; i<7; i++) {
+        let check = formatDate(start);
+        if(state.history[check] && state.history[check].type === 'tavern' && check !== dateStr) {
+          if(!state.history[check].isVip) count++;
+        }
+        start.setDate(start.getDate() + 1);
+      }
+      return count;
+    }
+
+    function checkAchievements() {
+      let streak = getStreak();
+      let runs = Object.values(state.history).filter(a => a.type === 'run');
+      let taverns = Object.values(state.history).filter(a => a.type === 'tavern');
+      
+      if (runs.length >= 1) unlockAch('first_blood');
+      if (runs.length >= 10) unlockAch('night_watch');
+      if (runs.length >= 50) unlockAch('forgemage');
+      if (taverns.length >= 1) unlockAch('tavern_noob');
+      
+      if (streak >= 7) unlockAch('perfect_week');
+      if (streak >= 20) unlockAch('ouroboros');
+      if (streak >= 30) unlockAch('holy_month');
+      if (streak >= 100) unlockAch('centurion');
+      
+      for(let key in state.history) {
+        if (state.history[key].type === 'run') {
+          let parts = key.split('-');
+          let d = new Date(parts[0], parts[1]-1, parts[2]);
+          let dayOfWeek = d.getDay();
+          
+          if (dayOfWeek === 1) unlockAch('monday_motivation');
+          if (dayOfWeek === 5) unlockAch('friday_survivor');
+          
+          if (dayOfWeek === 6) { 
+            let nextDay = new Date(d);
+            nextDay.setDate(d.getDate() + 1);
+            let nextKey = formatDate(nextDay);
+            if(state.history[nextKey] && state.history[nextKey].type === 'run') {
+                unlockAch('weekend_warrior');
+            }
+          }
+        }
+      }
+    }
+
+    function unlockAch(id) {
+      if (!state.achievements.includes(id)) {
+        state.achievements.push(id);
+        saveState();
+        let achInfo = ACHIEVEMENTS.find(a => a.id === id);
+        if (achInfo) spawnFloatingText(document.getElementById('avatarIcon'), `🏆 ${achInfo.title} !`, '#d29922');
+      }
+    }
+
+    function formatDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    }
+
+    function updateUI() {
+      const stats = getPlayerStats();
+      document.getElementById('lvlBadge').innerText = `LVL ${stats.level}`;
+      
+      if (state.equippedTitle) {
+        document.getElementById('heroTitle').innerText = `« ${state.equippedTitle} »`;
+      } else {
+        document.getElementById('heroTitle').innerText = stats.rank.title;
+      }
+      
+      document.getElementById('avatarIcon').innerText = stats.rank.emoji;
+
+      document.getElementById('streakCount').innerText = getStreak();
+      document.getElementById('xpText').innerText = `${stats.currentXpInLevel} / ${stats.xpNeeded}`;
+      document.getElementById('xpBarFill').style.width = `${(stats.currentXpInLevel / stats.xpNeeded) * 100}%`;
+      
+      if(state.activeBuffs && state.activeBuffs.doubleXp) {
+        document.getElementById('buffIndicator').innerText = "BUFF ACTIF : XP x2 (PROCHAINE COURSE)";
+      } else {
+        document.getElementById('buffIndicator').innerText = "";
+      }
+
+      checkAchievements();
+    }
+
+    function spawnFloatingText(element, text, color = null) {
+      const rect = element.getBoundingClientRect();
+      const floater = document.createElement('div');
+      floater.className = 'floating-text'; 
+      floater.innerText = text;
+      floater.style.color = color ? color : 'var(--xp-color)';
+      floater.style.left = `${rect.left + rect.width/2 - 50}px`; 
+      floater.style.top = `${rect.top}px`;
+      document.body.appendChild(floater);
+      setTimeout(() => floater.remove(), 1200);
+    }
+
+    function changeMonth(dir) {
+      displayMonth += dir;
+      if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+      else if (displayMonth < 0) { displayMonth = 11; displayYear--; }
+      renderCalendar();
+    }
+
+    function isBlockedDate(dateStr) {
+      // Bloquer le 1er et le 2 Septembre 2026
+      if (dateStr === "2026-09-01" || dateStr === "2026-09-02") {
+          return true;
+      }
+      return false;
+    }
+
+    function renderCalendar() {
+      const grid = document.getElementById('calGrid');
+      const prevBtn = document.getElementById('prevMonthBtn');
+      const monthNames = ["JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"];
+      document.getElementById('monthTitle').innerText = `${monthNames[displayMonth]} ${displayYear}`;
+
+      if (displayYear < state.startYear || (displayYear === state.startYear && displayMonth <= state.startMonth)) {
+        prevBtn.disabled = true; displayYear = state.startYear; displayMonth = state.startMonth;
+      } else { prevBtn.disabled = false; }
+
+      grid.innerHTML = `<div class="weekday">LU</div><div class="weekday">MA</div><div class="weekday">ME</div><div class="weekday">JE</div><div class="weekday">VE</div><div class="weekday">SA</div><div class="weekday">DI</div>`;
+
+      const firstDay = new Date(displayYear, displayMonth, 1);
+      const lastDay = new Date(displayYear, displayMonth + 1, 0);
+      let startDayOffset = firstDay.getDay() - 1; if (startDayOffset === -1) startDayOffset = 6;
+
+      for (let i = 0; i < startDayOffset; i++) {
+        const empty = document.createElement('div'); empty.className = 'day-node empty'; grid.appendChild(empty);
+      }
+
+      const todayStr = formatDate(new Date());
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = formatDate(new Date(displayYear, displayMonth, d));
+        const node = document.createElement('div'); node.className = 'day-node'; node.innerText = d;
+        node.id = 'day-' + dateStr;
+        
+        if (dateStr === todayStr) node.classList.add('today');
+        
+        if (isBlockedDate(dateStr)) {
+             node.classList.add('blocked');
+        } else {
+            if (state.history[dateStr]) node.classList.add(state.history[dateStr].type);
+            
+            if (new Date(displayYear, displayMonth, d) <= new Date()) {
+                node.onclick = () => openActionModal(dateStr);
+            } else {
+                node.style.opacity = "0.5";
+            }
+        }
+        grid.appendChild(node);
+      }
+    }
+
+    // --- LOOT SYSTEM ---
+    function rollLoot() {
+      let roll = Math.random();
+      if (roll < 0.05) return { type: 'title' };
+      if (roll < 0.12) return { type: 'item', id: 'ticket' };
+      if (roll < 0.25) return { type: 'item', id: 'bonbon' };
+      if (roll < 0.45) return { type: 'item', id: 'parch' };
+      return null;
+    }
+
+    function triggerLootDrop() {
+      let drop = rollLoot();
+      if (!drop) return;
+      
+      unlockAch('looter');
+
+      if (drop.type === 'item') {
+        state.inventory[drop.id] = (state.inventory[drop.id] || 0) + 1;
+        saveState();
+        showLootModal(ITEMS[drop.id].icon, ITEMS[drop.id].name, ITEMS[drop.id].desc);
+      } 
+      else if (drop.type === 'title') {
+        let availableTitles = TITLES_POOL.filter(t => !state.titles.includes(t));
+        if (availableTitles.length > 0) {
+          let randomTitle = availableTitles[Math.floor(Math.random() * availableTitles.length)];
+          state.titles.push(randomTitle);
+          saveState();
+          showLootModal('👑', "Nouveau Titre : " + randomTitle, "Tu peux l'équiper dans ton inventaire !");
+        } else {
+          state.inventory['parch'] += 1;
+          saveState();
+          showLootModal(ITEMS['parch'].icon, ITEMS['parch'].name, ITEMS['parch'].desc);
+        }
+      }
+    }
+
+    function showLootModal(icon, name, desc) {
+      document.getElementById('lootIcon').innerText = icon;
+      document.getElementById('lootName').innerText = name;
+      document.getElementById('lootDesc').innerText = desc;
+      setTimeout(() => {
+        document.getElementById('lootModal').classList.add('active');
+      }, 500); 
+    }
+
+    function openInvModal() {
+      const grid = document.getElementById('invGrid');
+      grid.innerHTML = '';
+      
+      let hasItems = false;
+      for (let id in state.inventory) {
+        if (state.inventory[id] > 0) {
+          hasItems = true;
+          let item = ITEMS[id];
+          grid.innerHTML += `
+            <div class="inv-card">
+              <div class="inv-info">
+                <div class="inv-icon">${item.icon}<div class="inv-qty">${state.inventory[id]}</div></div>
+                <div class="inv-text">
+                  <div class="inv-title">${item.name}</div>
+                  <div class="inv-desc">${item.desc}</div>
+                </div>
+              </div>
+              <button class="action-btn btn-use" style="width:auto; margin:0; font-size:0.9rem;" onclick="useItem('${id}')">Utiliser</button>
+            </div>
+          `;
+        }
+      }
+      if (!hasItems) grid.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.9rem; padding:10px;">Inventaire vide. Va courir pour loot !</div>`;
+
+      const tGrid = document.getElementById('titleGrid');
+      tGrid.innerHTML = '';
+      if (state.titles.length === 0) {
+        tGrid.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.9rem; padding:10px;">Aucun titre débloqué.</div>`;
+      } else {
+        tGrid.innerHTML += `
+          <div class="inv-card" style="cursor:pointer;" onclick="equipTitle(null)">
+            <div class="inv-info">
+              <div class="inv-text"><div class="inv-title" style="color:var(--text-muted);">[ Retirer le titre ]</div></div>
+            </div>
+          </div>
+        `;
+        state.titles.forEach(t => {
+          let isEquipped = (state.equippedTitle === t);
+          tGrid.innerHTML += `
+            <div class="inv-card" style="cursor:pointer; ${isEquipped ? 'border-color:var(--gold);' : ''}" onclick="equipTitle('${t}')">
+              <div class="inv-info">
+                <div class="inv-text">
+                  <div class="inv-title" style="color:${isEquipped ? 'var(--gold)' : 'var(--text-main)'};">« ${t} » ${isEquipped ? ' (Équipé)' : ''}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('invModal').classList.add('active');
+    }
+
+    function useItem(id) {
+      if (state.inventory[id] <= 0) return;
+      
+      if (id === 'parch') {
+        state.inventory[id]--;
+        state.totalXp += 50;
+        spawnFloatingText(document.getElementById('avatarIcon'), "+50 XP (Parchemin)", "#a78bfa");
+      } 
+      else if (id === 'bonbon') {
+        if (state.activeBuffs && state.activeBuffs.doubleXp) {
+          alert("Buff déjà actif !"); return;
+        }
+        state.inventory[id]--;
+        if(!state.activeBuffs) state.activeBuffs = {};
+        state.activeBuffs.doubleXp = true;
+        spawnFloatingText(document.getElementById('avatarIcon'), "BUFF XP x2 ACTIF !", "#a78bfa");
+      }
+      else if (id === 'ticket') {
+        alert("Pour utiliser le Ticket VIP, tente d'ajouter un 4ème jour de Taverne dans le calendrier. Il sera consommé automatiquement !");
+        return; 
+      }
+      
+      saveState();
+      updateUI();
+      openInvModal(); 
+    }
+
+    function equipTitle(t) {
+      state.equippedTitle = t;
+      saveState();
+      updateUI();
+      openInvModal();
+    }
+
+    // --- ACTIONS MODAL ---
+    function openActionModal(dateStr) {
+      selectedDateStr = dateStr;
+      
+      let parts = dateStr.split('-');
+      let dateObj = new Date(parts[0], parts[1]-1, parts[2]);
+      let isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+      let streakBonus = getStreakBonus();
+      
+      document.getElementById('actionModalTitle').innerText = `JOUR: ${dateStr}`;
+      
+      let btnRun = document.getElementById('btnRunMain');
+      let baseText = "⚔️ J'ai Couru !";
+      let buffText = (state.activeBuffs && state.activeBuffs.doubleXp) ? " (BUFF x2)" : "";
+      let streakText = streakBonus > 0 ? ` (+${streakBonus} XP Série)` : "";
+      
+      if (isWeekend) {
+        btnRun.innerText = `${baseText} (+200 XP BONUS WEEK-END)${streakText}${buffText}`;
+        btnRun.style.borderColor = "var(--gold)";
+        btnRun.style.color = "var(--gold)";
+      } else {
+        btnRun.innerText = `${baseText} (+100 XP)${streakText}${buffText}`;
+        btnRun.style.borderColor = "var(--xp-color)";
+        btnRun.style.color = "var(--xp-color)";
+      }
+      
+      const dayData = state.history[dateStr];
+      if (dayData) {
+        document.getElementById('actionButtons').style.display = 'none';
+        document.getElementById('removeButtons').style.display = 'block';
+        let reasonTxt = dayData.reason ? ` (Motif: ${dayData.reason})` : '';
+        let vipTxt = dayData.isVip ? ` [Billet VIP Utilisé 🎫]` : '';
+        document.getElementById('actionModalDesc').innerText = `Action enregistrée : ${dayData.type === 'run' ? 'Course ⚔️' : 'Taverne 🍺'}${reasonTxt}${vipTxt}`;
+      } else {
+        document.getElementById('actionButtons').style.display = 'block';
+        document.getElementById('removeButtons').style.display = 'none';
+        document.getElementById('actionModalDesc').innerText = "Choisis ton action pour ce jour.";
+      }
+      
+      document.getElementById('actionModal').classList.add('active');
+    }
+
+    function submitAction(type) {
+      let node = document.getElementById('day-' + selectedDateStr);
+      let parts = selectedDateStr.split('-');
+      let dateObj = new Date(parts[0], parts[1]-1, parts[2]);
+      let isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+      
+      let streakBonus = getStreakBonus();
+      let baseExp = isWeekend ? (XP_RUN * 2) : XP_RUN;
+      let gainedXp = baseExp + streakBonus;
+      
+      if (type === 'remove') {
+        const oldType = state.history[selectedDateStr].type;
+        let xpToRemove = 0;
+        if (oldType === 'run') {
+           xpToRemove = state.history[selectedDateStr].gainedXp || baseExp;
+        } else {
+           xpToRemove = XP_TAVERN;
+        }
+        state.totalXp = Math.max(0, state.totalXp - xpToRemove);
+        delete state.history[selectedDateStr];
+      } 
+      else if (type === 'run') {
+        if (state.activeBuffs && state.activeBuffs.doubleXp) {
+          gainedXp *= 2;
+          state.activeBuffs.doubleXp = false; 
+        }
+        
+        state.history[selectedDateStr] = { type: 'run', gainedXp: gainedXp };
+        state.totalXp += gainedXp;
+        spawnFloatingText(node, `+${gainedXp} XP`, (isWeekend || gainedXp > XP_RUN) ? '#d29922' : null);
+        
+        triggerLootDrop();
+      } 
+      else if (type === 'tavern') {
+        let tavernCount = countTavernInWeek(selectedDateStr);
+        let isVip = false;
+        
+        if (tavernCount >= 3) { 
+          if (state.inventory['ticket'] > 0) {
+            let useT = confirm("Tu as atteint la limite de 3 Tavernes. Veux-tu utiliser un [Ticket VIP Taverne 🎫] ?");
+            if (useT) {
+              state.inventory['ticket']--;
+              isVip = true;
+            } else {
+              return;
+            }
+          } else {
+            alert("❌ Limite atteinte ! Tu as déjà pris 3 jours de repos cette semaine et tu n'as pas de Ticket VIP."); 
+            return; 
+          }
+        }
+        
+        if (tavernCount === 2 && !isVip) {
+          let reason = prompt("🍺 C'est ton 3ème jour de repos de la semaine. Quel est le motif ?");
+          if (!reason) return;
+          state.history[selectedDateStr] = { type: 'tavern', reason: reason, isVip: isVip };
+          unlockAch('tavern_pillar');
+        } else {
+          state.history[selectedDateStr] = { type: 'tavern', isVip: isVip };
+        }
+        
+        state.totalXp += XP_TAVERN;
+        spawnFloatingText(node, `+${XP_TAVERN} XP`, '#ff9f43');
+      }
+
+      saveState(); updateUI(); renderCalendar(); closeModal('actionModal');
+    }
+
+    // --- OTHER MODALS ---
+    function openAchModal() {
+      const grid = document.getElementById('achGrid');
+      grid.innerHTML = '';
+      ACHIEVEMENTS.forEach(ach => {
+        const isUnlocked = state.achievements.includes(ach.id);
+        grid.innerHTML += `
+          <div class="ach-card ${isUnlocked ? 'unlocked' : ''}">
+            <div class="ach-icon">${ach.icon}</div>
+            <div class="ach-info">
+              <div class="ach-title">${ach.title}</div>
+              <div class="ach-desc">${ach.desc}</div>
+            </div>
+          </div>`;
+      });
+      document.getElementById('achModal').classList.add('active');
+    }
+    
+    function openStatsModal() {
+      let runs = Object.values(state.history).filter(a => a.type === 'run').length;
+      let taverns = Object.values(state.history).filter(a => a.type === 'tavern').length;
+      
+      document.getElementById('statTotalRuns').innerText = runs;
+      document.getElementById('statTotalTaverns').innerText = taverns;
+      document.getElementById('statMaxStreak').innerText = state.maxStreak;
+      document.getElementById('statAch').innerText = `${state.achievements.length}/${ACHIEVEMENTS.length}`;
+      
+      document.getElementById('statsModal').classList.add('active');
+    }
+
+    function exportToObsidian() {
+      let stats = getPlayerStats();
+      let runs = Object.values(state.history).filter(a => a.type === 'run').length;
+      let taverns = Object.values(state.history).filter(a => a.type === 'tavern').length;
+      
+      let text = `## Profil Running RPG
+
+- **Date d'export :** ${formatDate(new Date())}
+- **Niveau :** ${stats.level}
+- **Grade :** ${state.equippedTitle ? state.equippedTitle : stats.rank.title}
+- **Série actuelle :** ${getStreak()} jours (Max: ${state.maxStreak})
+- **XP Total :** ${state.totalXp}
+- **Courses totales :** ${runs}
+- **Jours de Taverne :** ${taverns}
+- **Hauts-Faits débloqués :** ${state.achievements.length}/${ACHIEVEMENTS.length}`;
+      
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert("✅ Statistiques copiées ! Tu peux les coller directement dans ton Obsidian.");
+        }).catch(err => {
+          alert("Erreur lors de la copie.");
+        });
+      } else {
+        alert("La copie n'est pas supportée sur ce navigateur, voici le texte :" + text);
+      }
+    }
+
+    function exportSave() {
+      let encoded = btoa(JSON.stringify(state));
+      let saveString = "RUN_SAVE:" + encoded;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(saveString).then(() => {
+          alert("💾 Code de sauvegarde copié dans le presse-papier ! Tu peux le coller dans ton Obsidian pour ne pas le perdre.");
+        }).catch(() => {
+          prompt("Copie manuellement ce code :", saveString);
+        });
+      } else {
+        prompt("Copie manuellement ce code :", saveString);
+      }
+    }
+
+    function importSave() {
+      let code = prompt("📂 Colle ton code de sauvegarde ici :");
+      if (!code) return;
+      
+      if (code.startsWith("RUN_SAVE:")) {
+        code = code.replace("RUN_SAVE:", "");
+      }
+      
+      try {
+        let decoded = atob(code);
+        let newState = JSON.parse(decoded);
+        
+        if (newState && typeof newState === 'object' && newState.history) {
+          state = newState;
+          saveState();
+          updateUI();
+          renderCalendar();
+          alert("✅ Sauvegarde restaurée avec succès !");
+        } else {
+          alert("❌ Fichier de sauvegarde invalide.");
+        }
+      } catch (e) {
+        alert("❌ Erreur : Code corrompu ou illisible.");
+      }
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // --- INIT ---
+    renderCalendar(); updateUI();
+  </script>
+</body>
+</html>
